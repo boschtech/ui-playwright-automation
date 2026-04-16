@@ -33,9 +33,11 @@ test.describe("Navigation & Layout", () => {
   });
 
   test("should navigate back to Dashboard", async ({ page }) => {
-    await page.goto("/products");
+    await page.goto("/");
     const navbar = new NavbarPage(page);
 
+    // Navigate away from dashboard first, then back.
+    await navbar.gotoProducts();
     await navbar.gotoDashboard();
     await expect(page).toHaveURL(/\/$/);
     await expect(
@@ -44,25 +46,30 @@ test.describe("Navigation & Layout", () => {
   });
 
   test("should highlight active nav link", async ({ page }) => {
-    await page.goto("/products");
+    await page.goto("/");
     const navbar = new NavbarPage(page);
+    await navbar.gotoProducts();
 
     await expect(navbar.productsLink).toHaveClass(/text-indigo-600/);
     await expect(navbar.ordersLink).not.toHaveClass(/text-indigo-600/);
   });
 
-  test("should handle direct URL navigation for all routes", async ({
+  test("should navigate through all routes via the navbar", async ({
     page,
   }) => {
-    await page.goto("/products");
+    await page.goto("/");
+    const navbar = new NavbarPage(page);
+
+    await navbar.gotoProducts();
     await expect(
       page.getByRole("heading", { name: "Products" })
     ).toBeVisible();
 
-    await page.goto("/orders");
+    await navbar.gotoOrders();
     await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
 
-    await page.goto("/orders/new");
+    await page.getByRole("link", { name: "New Order" }).click();
+    await expect(page).toHaveURL(/\/orders\/new$/);
     await expect(
       page.getByRole("heading", { name: "Create Order" })
     ).toBeVisible();

@@ -2,6 +2,7 @@ import { type Page, type Locator } from "@playwright/test";
 
 export class NavbarPage {
   readonly page: Page;
+  readonly nav: Locator;
   readonly brand: Locator;
   readonly dashboardLink: Locator;
   readonly productsLink: Locator;
@@ -9,21 +10,37 @@ export class NavbarPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.brand = page.getByText("Bosch Tech");
-    this.dashboardLink = page.getByRole("link", { name: "Dashboard" });
-    this.productsLink = page.getByRole("link", { name: "Products" });
-    this.ordersLink = page.getByRole("link", { name: "Orders" });
+    // Scope navbar link lookups to the <nav> element so they don't collide
+    // with links on the page that share a substring (e.g. "Total Products",
+    // "Total Orders", "Confirmed Orders").
+    this.nav = page.getByRole("navigation");
+    this.brand = this.nav.getByText("Bosch Tech");
+    this.dashboardLink = this.nav.getByRole("link", {
+      name: "Dashboard",
+      exact: true,
+    });
+    this.productsLink = this.nav.getByRole("link", {
+      name: "Products",
+      exact: true,
+    });
+    this.ordersLink = this.nav.getByRole("link", {
+      name: "Orders",
+      exact: true,
+    });
   }
 
   async gotoDashboard() {
     await this.dashboardLink.click();
+    await this.page.waitForURL(/\/$/);
   }
 
   async gotoProducts() {
     await this.productsLink.click();
+    await this.page.waitForURL(/\/products$/);
   }
 
   async gotoOrders() {
     await this.ordersLink.click();
+    await this.page.waitForURL(/\/orders$/);
   }
 }

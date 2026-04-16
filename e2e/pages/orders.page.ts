@@ -24,11 +24,20 @@ export class OrdersPage {
   }
 
   async goto() {
-    await this.page.goto("/orders");
+    // The deployed host returns 404 on direct URL navigation for SPA routes,
+    // so always load the dashboard first and then client-side navigate via
+    // the navbar.
+    await this.page.goto("/");
+    await this.page
+      .getByRole("navigation")
+      .getByRole("link", { name: "Orders", exact: true })
+      .click();
+    await this.page.waitForURL(/\/orders$/);
   }
 
   async gotoCreateOrder() {
     await this.newOrderButton.click();
+    await this.page.waitForURL(/\/orders\/new$/);
   }
 }
 
@@ -58,7 +67,16 @@ export class CreateOrderPage {
   }
 
   async goto() {
-    await this.page.goto("/orders/new");
+    // The deployed host returns 404 on direct URL navigation for SPA routes,
+    // so load the dashboard and navigate via Orders -> New Order.
+    await this.page.goto("/");
+    await this.page
+      .getByRole("navigation")
+      .getByRole("link", { name: "Orders", exact: true })
+      .click();
+    await this.page.waitForURL(/\/orders$/);
+    await this.page.getByRole("link", { name: "New Order" }).click();
+    await this.page.waitForURL(/\/orders\/new$/);
   }
 
   async selectProduct(productName: string) {

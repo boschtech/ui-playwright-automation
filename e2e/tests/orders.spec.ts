@@ -22,12 +22,12 @@ test.describe("Orders @order-service", () => {
 
   test("should display orders list or empty state", async ({ page }) => {
     await ordersPage.goto();
-    const hasOrders = (await ordersPage.orderRows.count()) > 0;
-    if (hasOrders) {
-      await expect(ordersPage.ordersTable).toBeVisible();
-    } else {
-      await expect(ordersPage.noOrdersMessage).toBeVisible();
-    }
+    // Wait for either the table or the empty-state message to appear.
+    // `.count()` can race with the React Query load, so use `.or()` to
+    // allow whichever condition settles first.
+    await expect(
+      ordersPage.ordersTable.or(ordersPage.noOrdersMessage)
+    ).toBeVisible();
   });
 
   test("should display order table headers when orders exist", async ({

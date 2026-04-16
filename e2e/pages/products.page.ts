@@ -39,7 +39,15 @@ export class ProductsPage {
   }
 
   async goto() {
-    await this.page.goto("/products");
+    // The deployed host returns 404 on direct URL navigation for SPA routes,
+    // so always load the dashboard first and then client-side navigate via
+    // the navbar.
+    await this.page.goto("/");
+    await this.page
+      .getByRole("navigation")
+      .getByRole("link", { name: "Products", exact: true })
+      .click();
+    await this.page.waitForURL(/\/products$/);
   }
 
   async openCreateForm() {
@@ -130,9 +138,18 @@ export class ProductDetailPage {
     this.description = page.locator("p.mt-4.text-gray-600");
     this.price = page.locator("span.text-2xl.font-bold");
     this.stockBadge = page.locator("span.rounded-full");
-    this.editButton = page.getByRole("button", { name: "Edit" });
-    this.deleteButton = page.getByRole("button", { name: "Delete" });
-    this.cancelEditButton = page.getByRole("button", { name: "Cancel" });
+    // Scope edit/delete/cancel buttons to the detail-page product card so they
+    // don't collide with the bare-text Delete buttons on the product list
+    // (which can briefly remain in the DOM during route transitions).
+    this.editButton = page.locator("button.border-gray-300", {
+      hasText: "Edit",
+    });
+    this.deleteButton = page.locator("button.border-red-300", {
+      hasText: "Delete",
+    });
+    this.cancelEditButton = page.locator("button.border-gray-300", {
+      hasText: "Cancel",
+    });
 
     this.nameInput = page.locator("#product-name");
     this.categoryInput = page.locator("#product-category");

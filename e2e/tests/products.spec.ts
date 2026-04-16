@@ -19,13 +19,11 @@ test.describe("Products @product-service", () => {
   });
 
   test("should display product list or empty state", async () => {
-    // Either there are product cards or the empty message is shown
-    const hasProducts = (await productsPage.productCards.count()) > 0;
-    if (hasProducts) {
-      await expect(productsPage.productCards.first()).toBeVisible();
-    } else {
-      await expect(productsPage.noProductsMessage).toBeVisible();
-    }
+    // Either product cards or the empty-state message should eventually
+    // be visible. Using `.or()` avoids racing with the initial data load.
+    await expect(
+      productsPage.productCards.first().or(productsPage.noProductsMessage)
+    ).toBeVisible();
   });
 
   test("should open and close the create product form", async ({ page }) => {
