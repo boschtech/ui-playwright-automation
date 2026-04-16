@@ -1,0 +1,17 @@
+{
+  "name": "ui-playwright-automation",
+  "private": true,
+  "version": "1.0.0",
+  "description": "End-to-end Playwright tests for Bosch Tech micro-frontend",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:products": "playwright test --grep @product-service",
+    "test:e2e:orders": "playwright test --grep @order-service",
+    "test:e2e:all": "playwright test",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "typescript": "~5.7.0"
+  }
+}

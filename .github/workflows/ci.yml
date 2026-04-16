@@ -1,0 +1,148 @@
+name: UI Playwright E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  # Allow other repos to trigger this workflow
+  workflow_dispatch:
+    inputs:
+      test_grep:
+        description: "Playwright --grep filter (e.g. @product-service, @order-service, or empty for all)"
+        required: false
+        default: ""
+      preview_url:
+        description: "Uffizzi preview URL to test against (skips preview creation if provided)"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ────────────────────────────────────────────────────────────
+  # Stage 1: Create Uffizzi Ephemeral Preview Environment
+  # ────────────────────────────────────────────────────────────
+  uffizzi-preview:
+    name: Create Uffizzi Preview
+    if: ${{ github.event.inputs.preview_url == '' }}
+    runs-on: ubuntu-latest
+    outputs:
+      preview_url: ${{ steps.preview.outputs.url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Uffizzi Preview
+        id: preview
+        uses: UffizziCloud/preview-action@v3
+        with:
+          compose-file: docker-compose.uffizzi.yml
+          server: https://app.uffizzi.com
+          username: ${{ secrets.UFFIZZI_USER }}
+          password: ${{ secrets.UFFIZZI_PASSWORD }}
+          project: ${{ secrets.UFFIZZI_PROJECT }}
+
+      - name: Wait for services to be healthy
+        run: |
+          PREVIEW_URL="${{ steps.preview.outputs.url }}"
+          echo "Preview URL: $PREVIEW_URL"
+
+          # Wait up to 5 minutes for the frontend to respond
+          for i in $(seq 1 30); do
+            if curl -sf "$PREVIEW_URL" > /dev/null 2>&1; then
+              echo "✅ Frontend is responding"
+              exit 0
+            fi
+            echo "Waiting for frontend... ($i/30)"
+            sleep 10
+          done
+          echo "❌ Frontend did not respond in time"
+          exit 1
+
+  # ────────────────────────────────────────────────────────────
+  # Stage 2: Run Playwright E2E Tests
+  # ────────────────────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests
+    needs: [uffizzi-preview]
+    if: always() && (needs.uffizzi-preview.result == 'success' || github.event.inputs.preview_url != '')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Resolve preview URL
+        id: resolve-url
+        run: |
+          if [ -n "${{ github.event.inputs.preview_url }}" ]; then
+            echo "url=${{ github.event.inputs.preview_url }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=${{ needs.uffizzi-preview.outputs.preview_url }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Playwright Tests
+        env:
+          E2E_BASE_URL: ${{ steps.resolve-url.outputs.url }}
+          CI: true
+        run: |
+          GREP="${{ github.event.inputs.test_grep }}"
+          if [ -n "$GREP" ]; then
+            npx playwright test --grep "$GREP"
+          else
+            npx playwright test
+          fi
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 14
+
+  # ────────────────────────────────────────────────────────────
+  # Stage 3: Cleanup Uffizzi Preview
+  # ────────────────────────────────────────────────────────────
+  cleanup-preview:
+    name: Cleanup Preview
+    needs: [uffizzi-preview, e2e-tests]
+    if: always() && needs.uffizzi-preview.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete Uffizzi Preview
+        uses: UffizziCloud/preview-action/delete@v3
+        with:
+          compose-file: docker-compose.uffizzi.yml
+          server: https://app.uffizzi.com
+          username: ${{ secrets.UFFIZZI_USER }}
+          password: ${{ secrets.UFFIZZI_PASSWORD }}
+          project: ${{ secrets.UFFIZZI_PROJECT }}
