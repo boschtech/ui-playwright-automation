@@ -30,17 +30,44 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    # packages: read lets us pull the private GHCR service images.
     permissions:
       contents: read
-      packages: read
 
     env:
-      COMPOSE_FILE: docker-compose.uffizzi.yml
+      # Compose reads this natively; both files are applied in order.
+      COMPOSE_FILE: docker-compose.uffizzi.yml:docker-compose.ci.override.yml
 
     steps:
-      - name: Checkout
+      - name: Checkout ui-playwright-automation
         uses: actions/checkout@v4
+
+      # Sibling service repos. If any of them are private, set a
+      # CROSS_REPO_TOKEN repo secret to a PAT/App token with `repo`
+      # (read) scope on those repos; otherwise the default GITHUB_TOKEN
+      # is used and must have access.
+      - name: Checkout product-service
+        if: ${{ github.event.inputs.preview_url == '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: boschtech/product-service
+          path: services/product-service
+          token: ${{ secrets.CROSS_REPO_TOKEN || github.token }}
+
+      - name: Checkout order-service
+        if: ${{ github.event.inputs.preview_url == '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: boschtech/order-service
+          path: services/order-service
+          token: ${{ secrets.CROSS_REPO_TOKEN || github.token }}
+
+      - name: Checkout micro-frontend
+        if: ${{ github.event.inputs.preview_url == '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: boschtech/micro-frontend
+          path: services/micro-frontend
+          token: ${{ secrets.CROSS_REPO_TOKEN || github.token }}
 
       - name: Setup Node 20
         uses: actions/setup-node@v4
@@ -54,19 +81,11 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Log in to GHCR
-        if: ${{ github.event.inputs.preview_url == '' }}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Start stack with Docker Compose
         if: ${{ github.event.inputs.preview_url == '' }}
         run: |
-          docker compose -f "$COMPOSE_FILE" up -d --build
-          docker compose -f "$COMPOSE_FILE" ps
+          docker compose up -d --build
+          docker compose ps
 
       - name: Wait for frontend to be healthy
         if: ${{ github.event.inputs.preview_url == '' }}
@@ -80,8 +99,8 @@ jobs:
             sleep 5
           done
           echo "❌ Frontend did not respond in time"
-          docker compose -f "$COMPOSE_FILE" ps
-          docker compose -f "$COMPOSE_FILE" logs --no-color
+          docker compose ps
+          docker compose logs --no-color
           exit 1
 
       - name: Resolve base URL
@@ -107,11 +126,11 @@ jobs:
 
       - name: Dump compose logs on failure
         if: failure() && github.event.inputs.preview_url == ''
-        run: docker compose -f "$COMPOSE_FILE" logs --no-color
+        run: docker compose logs --no-color
 
       - name: Tear down Docker Compose
         if: always() && github.event.inputs.preview_url == ''
-        run: docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+        run: docker compose down -v --remove-orphans
 
       - name: Upload Playwright Report
         if: always()

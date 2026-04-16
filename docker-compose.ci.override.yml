@@ -1,0 +1,36 @@
+# docker-compose.ci.override.yml
+#
+# CI-only override for the GitHub Actions workflow.
+#
+# The base docker-compose.uffizzi.yml references pre-built GHCR images
+# (ghcr.io/boschtech/product-service, ghcr.io/boschtech/order-service)
+# that are not published anywhere. This override builds those services
+# from source checkouts placed under ./services/* by the workflow, and
+# also switches micro-frontend from a git-URL build to a local build so
+# no private repo needs to be cloned by the Docker daemon.
+#
+# Usage:
+#   docker compose \
+#     -f docker-compose.uffizzi.yml \
+#     -f docker-compose.ci.override.yml \
+#     up -d --build
+services:
+  product-service:
+    # Override the remote image ref with a local tag so Compose does
+    # not attempt to pull from GHCR before building.
+    image: ui-playwright-ci/product-service:latest
+    pull_policy: never
+    build:
+      context: ./services/product-service
+
+  order-service:
+    image: ui-playwright-ci/order-service:latest
+    pull_policy: never
+    build:
+      context: ./services/order-service
+
+  micro-frontend:
+    # Inherit dockerfile_inline from the base file; only replace the
+    # build context with the locally checked-out source tree.
+    build:
+      context: ./services/micro-frontend
