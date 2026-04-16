@@ -13,7 +13,7 @@ on:
         required: false
         default: ""
       preview_url:
-        description: "Uffizzi preview URL to test against (skips preview creation if provided)"
+        description: "Preview URL to test against (skips local docker compose if provided)"
         required: false
         default: ""
 
@@ -23,56 +23,20 @@ concurrency:
 
 jobs:
   # ────────────────────────────────────────────────────────────
-  # Stage 1: Create Uffizzi Ephemeral Preview Environment
-  # ────────────────────────────────────────────────────────────
-  uffizzi-preview:
-    name: Create Uffizzi Preview
-    if: ${{ github.event.inputs.preview_url == '' }}
-    runs-on: ubuntu-latest
-    # Required so the Uffizzi action can request a GitHub OIDC token
-    # to authenticate with https://app.uffizzi.com (no password needed).
-    permissions:
-      contents: read
-      id-token: write
-    outputs:
-      preview_url: ${{ steps.preview.outputs.url }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Create Uffizzi Preview
-        id: preview
-        uses: UffizziCloud/preview-action@v3
-        with:
-          compose-file: docker-compose.uffizzi.yml
-          server: https://app.uffizzi.com
-
-      - name: Wait for services to be healthy
-        run: |
-          PREVIEW_URL="${{ steps.preview.outputs.url }}"
-          echo "Preview URL: $PREVIEW_URL"
-
-          # Wait up to 5 minutes for the frontend to respond
-          for i in $(seq 1 30); do
-            if curl -sf "$PREVIEW_URL" > /dev/null 2>&1; then
-              echo "✅ Frontend is responding"
-              exit 0
-            fi
-            echo "Waiting for frontend... ($i/30)"
-            sleep 10
-          done
-          echo "❌ Frontend did not respond in time"
-          exit 1
-
-  # ────────────────────────────────────────────────────────────
-  # Stage 2: Run Playwright E2E Tests
+  # Single stage: bring the stack up via Docker Compose on the
+  # runner, run Playwright against http://localhost, then tear it
+  # down. No external preview-env service is required.
   # ────────────────────────────────────────────────────────────
   e2e-tests:
     name: E2E Tests
-    needs: [uffizzi-preview]
-    if: always() && (needs.uffizzi-preview.result == 'success' || github.event.inputs.preview_url != '')
     runs-on: ubuntu-latest
+    # packages: read lets us pull the private GHCR service images.
+    permissions:
+      contents: read
+      packages: read
+
+    env:
+      COMPOSE_FILE: docker-compose.uffizzi.yml
 
     steps:
       - name: Checkout
@@ -90,13 +54,43 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Resolve preview URL
+      - name: Log in to GHCR
+        if: ${{ github.event.inputs.preview_url == '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start stack with Docker Compose
+        if: ${{ github.event.inputs.preview_url == '' }}
+        run: |
+          docker compose -f "$COMPOSE_FILE" up -d --build
+          docker compose -f "$COMPOSE_FILE" ps
+
+      - name: Wait for frontend to be healthy
+        if: ${{ github.event.inputs.preview_url == '' }}
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost > /dev/null 2>&1; then
+              echo "✅ Frontend is responding"
+              exit 0
+            fi
+            echo "Waiting for frontend... ($i/60)"
+            sleep 5
+          done
+          echo "❌ Frontend did not respond in time"
+          docker compose -f "$COMPOSE_FILE" ps
+          docker compose -f "$COMPOSE_FILE" logs --no-color
+          exit 1
+
+      - name: Resolve base URL
         id: resolve-url
         run: |
           if [ -n "${{ github.event.inputs.preview_url }}" ]; then
             echo "url=${{ github.event.inputs.preview_url }}" >> "$GITHUB_OUTPUT"
           else
-            echo "url=${{ needs.uffizzi-preview.outputs.preview_url }}" >> "$GITHUB_OUTPUT"
+            echo "url=http://localhost" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run Playwright Tests
@@ -110,6 +104,14 @@ jobs:
           else
             npx playwright test
           fi
+
+      - name: Dump compose logs on failure
+        if: failure() && github.event.inputs.preview_url == ''
+        run: docker compose -f "$COMPOSE_FILE" logs --no-color
+
+      - name: Tear down Docker Compose
+        if: always() && github.event.inputs.preview_url == ''
+        run: docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
 
       - name: Upload Playwright Report
         if: always()
@@ -126,26 +128,3 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 14
-
-  # ────────────────────────────────────────────────────────────
-  # Stage 3: Cleanup Uffizzi Preview
-  # ────────────────────────────────────────────────────────────
-  cleanup-preview:
-    name: Cleanup Preview
-    needs: [uffizzi-preview, e2e-tests]
-    if: always() && needs.uffizzi-preview.result == 'success'
-    runs-on: ubuntu-latest
-    # Same OIDC permission needed to authenticate the delete call.
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Delete Uffizzi Preview
-        uses: UffizziCloud/preview-action/delete@v3
-        with:
-          compose-file: docker-compose.uffizzi.yml
-          server: https://app.uffizzi.com
