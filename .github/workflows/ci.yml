@@ -29,6 +29,11 @@ jobs:
     name: Create Uffizzi Preview
     if: ${{ github.event.inputs.preview_url == '' }}
     runs-on: ubuntu-latest
+    # Required so the Uffizzi action can request a GitHub OIDC token
+    # to authenticate with https://app.uffizzi.com (no password needed).
+    permissions:
+      contents: read
+      id-token: write
     outputs:
       preview_url: ${{ steps.preview.outputs.url }}
 
@@ -42,9 +47,6 @@ jobs:
         with:
           compose-file: docker-compose.uffizzi.yml
           server: https://app.uffizzi.com
-          username: ${{ secrets.UFFIZZI_USER }}
-          password: ${{ secrets.UFFIZZI_PASSWORD }}
-          project: ${{ secrets.UFFIZZI_PROJECT }}
 
       - name: Wait for services to be healthy
         run: |
@@ -133,6 +135,10 @@ jobs:
     needs: [uffizzi-preview, e2e-tests]
     if: always() && needs.uffizzi-preview.result == 'success'
     runs-on: ubuntu-latest
+    # Same OIDC permission needed to authenticate the delete call.
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout
@@ -143,6 +149,3 @@ jobs:
         with:
           compose-file: docker-compose.uffizzi.yml
           server: https://app.uffizzi.com
-          username: ${{ secrets.UFFIZZI_USER }}
-          password: ${{ secrets.UFFIZZI_PASSWORD }}
-          project: ${{ secrets.UFFIZZI_PROJECT }}
