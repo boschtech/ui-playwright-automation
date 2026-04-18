@@ -222,6 +222,7 @@ jobs:
           path: playwright-report
 
       - name: Deploy report to gh-pages
+        id: deploy
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -237,3 +238,31 @@ jobs:
             Run: ${{ github.run_id }}
             Commit: ${{ github.sha }}
             Workflow: ${{ github.workflow }}
+
+      - name: Write Playwright report link to run summary
+        if: always()
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          # Derive the Pages URL. For a project site the canonical URL is:
+          #   https://<owner>.github.io/<repo>/
+          # Lowercase the owner because GitHub Pages hostnames are case-insensitive
+          # but case-sensitive repo paths are served verbatim.
+          OWNER_LC=$(echo "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')
+          PAGES_URL="https://${OWNER_LC}.github.io/${REPO_NAME}/"
+
+          {
+            echo "## 📊 Playwright Report"
+            echo ""
+            echo "The HTML report for this run has been published to GitHub Pages:"
+            echo ""
+            echo "🔗 **[View Playwright Report](${PAGES_URL})**"
+            echo ""
+            echo "- Commit: \`${COMMIT_SHA}\`"
+            echo "- Run ID: [\`${RUN_ID}\`](https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/runs/${RUN_ID})"
+            echo ""
+            echo "> Note: GitHub Pages may take ~30s to propagate after deploy."
+          } >> "$GITHUB_STEP_SUMMARY"

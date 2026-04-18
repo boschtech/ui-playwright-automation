@@ -16,7 +16,9 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "on-first-retry",
+    // Record every test and keep the video only when the test fails. This
+    // makes post-mortem debugging from the published report much easier.
+    video: "retain-on-failure",
   },
   projects: [
     {
