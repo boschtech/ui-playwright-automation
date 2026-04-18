@@ -35,7 +35,9 @@ jobs:
       - name: Checkout micro-frontend
         uses: actions/checkout@v4
         with:
+          repository: boschtech/micro-frontend
           path: micro-frontend
+          token: ${{ secrets.CROSS_REPO_TOKEN || github.token }}
 
       - name: Checkout product-service
         uses: actions/checkout@v4
@@ -51,12 +53,10 @@ jobs:
           path: order-service
           token: ${{ secrets.CROSS_REPO_TOKEN || github.token }}
 
-      - name: Checkout ui-playwright-automation
+      - name: Checkout ui-playwright-automation (this repo)
         uses: actions/checkout@v4
         with:
-          repository: boschtech/ui-playwright-automation
           path: ui-playwright-automation
-          token: ${{ secrets.CROSS_REPO_TOKEN || github.token }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
