@@ -22,8 +22,10 @@ export class ProductsPage {
     this.page = page;
     this.heading = page.getByRole("heading", { name: "Products" });
     this.newProductButton = page.getByRole("button", { name: "New Product" });
+    // Product cards are direct children of the grid container. The rebrand
+    // swapped `rounded-lg`/`border-gray-200` for `rounded-xl`/`border-bosch-border`.
     this.productCards = page.locator(
-      "div.grid > div.rounded-lg.border.border-gray-200"
+      "div.grid > div.rounded-xl.border.border-bosch-border"
     );
     this.noProductsMessage = page.getByText("No products found.");
     this.loadingMessage = page.getByText("Loading products");
@@ -133,23 +135,23 @@ export class ProductDetailPage {
     this.page = page;
 
     this.backLink = page.getByRole("link", { name: "Back to Products" });
-    this.productName = page.locator("h1.text-2xl.font-bold");
-    this.category = page.locator("p.text-sm.text-gray-500").first();
-    this.description = page.locator("p.mt-4.text-gray-600");
-    this.price = page.locator("span.text-2xl.font-bold");
-    this.stockBadge = page.locator("span.rounded-full");
-    // Scope edit/delete/cancel buttons to the detail-page product card so they
-    // don't collide with the bare-text Delete buttons on the product list
-    // (which can briefly remain in the DOM during route transitions).
-    this.editButton = page.locator("button.border-gray-300", {
-      hasText: "Edit",
-    });
-    this.deleteButton = page.locator("button.border-red-300", {
-      hasText: "Delete",
-    });
-    this.cancelEditButton = page.locator("button.border-gray-300", {
-      hasText: "Cancel",
-    });
+
+    // Scope detail-page locators to the detail card (the rounded-xl panel
+    // that contains the product's <h1>). This avoids collisions with the
+    // product list cards, which share some styling.
+    const detailCard = page
+      .locator("div.rounded-xl.border.border-bosch-border")
+      .filter({ has: page.locator("h1") });
+
+    this.productName = detailCard.locator("h1");
+    this.category = detailCard.locator("p.text-bosch-muted").first();
+    this.description = detailCard.locator("p.text-bosch-text");
+    this.price = detailCard.locator("span.text-bosch-gold").first();
+    this.stockBadge = detailCard.locator("span.rounded-full");
+    // Edit / Delete / Cancel buttons live inside the detail card.
+    this.editButton = detailCard.getByRole("button", { name: "Edit" });
+    this.deleteButton = detailCard.getByRole("button", { name: "Delete" });
+    this.cancelEditButton = detailCard.getByRole("button", { name: "Cancel" });
 
     this.nameInput = page.locator("#product-name");
     this.categoryInput = page.locator("#product-category");

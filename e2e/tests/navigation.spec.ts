@@ -50,8 +50,13 @@ test.describe("Navigation & Layout", () => {
     const navbar = new NavbarPage(page);
     await navbar.gotoProducts();
 
-    await expect(navbar.productsLink).toHaveClass(/text-indigo-600/);
-    await expect(navbar.ordersLink).not.toHaveClass(/text-indigo-600/);
+    // The active nav link exposes `aria-current="page"` (React Router NavLink).
+    // Assert on that rather than a visual class which may change with themes.
+    await expect(navbar.productsLink).toHaveAttribute("aria-current", "page");
+    await expect(navbar.ordersLink).not.toHaveAttribute(
+      "aria-current",
+      "page"
+    );
   });
 
   test("should navigate through all routes via the navbar", async ({

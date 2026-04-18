@@ -150,11 +150,13 @@ test.describe("Orders @order-service", () => {
     await ordersPage.goto();
     const hasOrders = (await ordersPage.orderRows.count()) > 0;
     if (hasOrders) {
+      // Product links in order rows point at `/products/:id`. Select by href
+      // prefix so the test is resilient to visual class changes.
       const productLink = ordersPage.orderRows
         .first()
-        .locator("a.text-indigo-600");
+        .locator("a[href^='/products/']");
       if ((await productLink.count()) > 0) {
-        await productLink.click();
+        await productLink.first().click();
         await expect(page).toHaveURL(/\/products\/.+/);
       }
     }

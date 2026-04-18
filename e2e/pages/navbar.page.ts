@@ -14,7 +14,10 @@ export class NavbarPage {
     // with links on the page that share a substring (e.g. "Total Products",
     // "Total Orders", "Confirmed Orders").
     this.nav = page.getByRole("navigation");
-    this.brand = this.nav.getByText("Bosch Tech");
+    // The brand is an <a aria-label="Bosch Tech"> containing a logo <img>.
+    // The visible <span>Bosch Tech</span> is `sr-only`, so match via the
+    // accessible role/name instead of plain text for visibility checks.
+    this.brand = this.nav.getByRole("link", { name: "Bosch Tech" });
     this.dashboardLink = this.nav.getByRole("link", {
       name: "Dashboard",
       exact: true,
