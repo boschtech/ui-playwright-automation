@@ -147,24 +147,24 @@ jobs:
         working-directory: ui-playwright-automation
         run: npx playwright install --with-deps
 
-      # - name: Run All E2E Tests
-      #   working-directory: ui-playwright-automation
-      #   env:
-      #     E2E_BASE_URL: http://localhost:3000
-      #     CI: true
-      #   run: npx playwright test
-
-      - name: Run Playwright Tests
+      - name: Run All E2E Tests
+        working-directory: ui-playwright-automation
         env:
-          E2E_BASE_URL: ${{ steps.resolve-url.outputs.url }}
+          E2E_BASE_URL: http://localhost:3000
           CI: true
-        run: |
-          GREP="${{ github.event.inputs.test_grep }}"
-          if [ -n "$GREP" ]; then
-            npx playwright test --grep "$GREP"
-          else
-            npx playwright test
-          fi
+        run: npx playwright test
+
+      # - name: Run Playwright Tests
+      #   env:
+      #     E2E_BASE_URL: ${{ steps.resolve-url.outputs.url }}
+      #     CI: true
+      #   run: |
+      #     GREP="${{ github.event.inputs.test_grep }}"
+      #     if [ -n "$GREP" ]; then
+      #       npx playwright test --grep "$GREP"
+      #     else
+      #       npx playwright test
+      #     fi
 
       - name: Upload Playwright Report
         if: always()
