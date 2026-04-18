@@ -199,3 +199,41 @@ jobs:
           for pidfile in /tmp/product-service.pid /tmp/order-service.pid /tmp/micro-frontend.pid; do
             [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null || true
           done
+
+  # ────────────────────────────────────────────────────────────
+  # Publish the Playwright HTML report to the gh-pages branch so
+  # it can be viewed at https://<org>.github.io/<repo>/
+  # Runs after e2e-tests, even on failure, so failed runs are
+  # still browsable. Only publishes from the main branch.
+  # ────────────────────────────────────────────────────────────
+  publish-report:
+    name: Publish Playwright Report to GitHub Pages
+    needs: e2e-tests
+    if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Playwright Report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: Deploy report to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playwright-report
+          publish_branch: gh-pages
+          keep_files: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: "docs: update Playwright report for ${{ github.sha }}"
+          full_commit_message: |
+            docs: update Playwright report
+
+            Run: ${{ github.run_id }}
+            Commit: ${{ github.sha }}
+            Workflow: ${{ github.workflow }}
