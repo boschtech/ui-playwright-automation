@@ -1,0 +1,19 @@
+flowchart LR
+    classDef edge fill:#eef,stroke:#55f,color:#000
+    classDef svc fill:#efe,stroke:#080,color:#000
+    classDef cdn fill:#fef,stroke:#808,color:#000
+
+    browser([🌐 User Browser]):::edge
+
+    subgraph Render["Render.com"]
+      direction LR
+      cdn["Static Site<br/>micro-frontend<br/><i>dist/ via Vite build</i>"]:::cdn
+      ps["Web Service (Docker)<br/>product-service<br/><i>/actuator/health</i>"]:::svc
+      os["Web Service (Docker)<br/>order-service<br/><i>/actuator/health</i>"]:::svc
+    end
+
+    browser -- HTTPS --> cdn
+    cdn -- VITE_PRODUCT_SERVICE_URL --> ps
+    cdn -- VITE_ORDER_SERVICE_URL --> os
+    os -- PRODUCT_SERVICE_URL --> ps
+    ps -- ORDER_SERVICE_URL --> os

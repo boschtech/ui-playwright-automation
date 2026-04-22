@@ -1,0 +1,26 @@
+flowchart TB
+    classDef consumer fill:#e1d5e7,stroke:#9673a6,color:#000
+    classDef provider fill:#d5e8d4,stroke:#82b366,color:#000
+    classDef pact fill:#fff2cc,stroke:#d6b656,color:#000
+
+    MFE["Micro Frontend<br/>@pact-foundation/pact"]:::consumer
+    OSC["Order Service<br/>(consumer of Product)"]:::consumer
+    PSC["Product Service<br/>(consumer of Order)"]:::consumer
+    PSP["Product Service<br/>(provider)"]:::provider
+    OSP["Order Service<br/>(provider)"]:::provider
+
+    P1[("📄 mfe ⇄ product-service")]:::pact
+    P2[("📄 mfe ⇄ order-service")]:::pact
+    P3[("📄 order-service ⇄ product-service")]:::pact
+    P4[("📄 product-service ⇄ order-service")]:::pact
+
+    MFE -- generates --> P1
+    MFE -- generates --> P2
+    OSC -- generates --> P3
+    PSC -- generates --> P4
+
+    P1 -- verified by --> PSP
+    P2 -- verified by --> OSP
+    P3 -- verified by --> PSP
+    P4 -- verified by --> OSP
+    P3 -- verified by --> PS

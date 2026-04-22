@@ -1,0 +1,18 @@
+C4Context
+    title System Context — Bosch Tech Platform
+    Person(customer, "End User", "Browses products and places orders via a web browser")
+    System_Boundary(platform, "Bosch Tech Platform") {
+        System(mfe, "Micro Frontend", "React 19 SPA — product & order UI")
+        System(product, "Product Service", "Spring Boot REST API — product catalog")
+        System(order, "Order Service", "Spring Boot REST API — order management")
+    }
+    System_Ext(render, "Render.com", "Static + Docker hosting")
+    System_Ext(gh, "GitHub Actions", "CI/CD & quality gates")
+    Rel(customer, mfe, "Uses", "HTTPS")
+    Rel(mfe, product, "Reads/writes products", "JSON/HTTPS")
+    Rel(mfe, order, "Reads/writes orders", "JSON/HTTPS")
+    Rel(order, product, "Validates product IDs", "JSON/HTTPS")
+    Rel(mfe, render, "Deployed to")
+    Rel(product, render, "Deployed to")
+    Rel(order, render, "Deployed to")
+    Rel(gh, render, "Triggers deploy on green build")

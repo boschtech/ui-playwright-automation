@@ -1,0 +1,15 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant MFE as Micro Frontend<br/>(React 19)
+    participant OS as Order Service<br/>(Spring Boot)
+    participant PS as Product Service<br/>(Spring Boot)
+
+    U->>MFE: Fill "Create Order" form
+    MFE->>MFE: Client-side validation (TypeScript types)
+    MFE->>+OS: POST /api/orders {productId, qty}
+    OS->>+PS: GET /api/products/{id}
+    PS-->>-OS: 200 · {id, name, price}
+    OS->>OS: Validate · compute total
+    OS-->>-MFE: 201 Created · {orderId, total}
+    MFE->>U: ✅ Success toast + redirect

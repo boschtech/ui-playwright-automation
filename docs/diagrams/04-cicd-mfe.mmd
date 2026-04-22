@@ -1,0 +1,8 @@
+flowchart LR
+    classDef gate fill:#fff2cc,stroke:#d6b656,color:#000
+    A[🔍 Lint + Typecheck<br/>eslint, tsc]:::gate --> B[🧪 Unit Tests<br/>Vitest + coverage]:::gate
+    B --> C[🧩 Component Tests<br/>Testing Library]:::gate
+    B --> D[📄 Contract Tests<br/>Pact consumer]:::gate
+    C --> E[🏗️ Build<br/>vite build]:::gate
+    D --> E
+    E --> F[🎭 E2E Tests<br/>Playwright · full stack]:::gate

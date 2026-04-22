@@ -1,0 +1,21 @@
+flowchart LR
+    classDef test fill:#fff2cc,stroke:#d6b656,color:#000
+    classDef svc fill:#d5e8d4,stroke:#82b366,color:#000
+    classDef mfe fill:#dae8fc,stroke:#6c8ebf,color:#000
+
+    subgraph Suite["ui-playwright-automation"]
+      T1["navigation.spec.ts<br/>+ dashboard.spec.ts<br/>(untagged · always)"]:::test
+      T2["products.spec.ts<br/>@product-service"]:::test
+      T3["orders.spec.ts<br/>@order-service"]:::test
+    end
+
+    subgraph Stack["Stack under test"]
+      MFE["Micro Frontend :3000"]:::mfe
+      PS["product-service :8080"]:::svc
+      OS["order-service :8081"]:::svc
+    end
+
+    T1 --> MFE
+    T2 --> MFE --> PS
+    T3 --> MFE --> OS
+    OS --> PS

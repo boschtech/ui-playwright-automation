@@ -1,0 +1,5 @@
+flowchart LR
+    classDef gate fill:#d5e8d4,stroke:#82b366,color:#000
+    A[🧪 Unit Tests<br/>JUnit 5 + JaCoCo]:::gate --> B[📄 Pact Contract Tests<br/>consumer + provider verify]:::gate
+    B --> C[🧩 Component Tests<br/>Spring Boot HTTP]:::gate
+    C --> D[🎭 E2E Tests<br/>Playwright tagged by service]:::gate

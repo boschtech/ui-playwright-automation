@@ -1,0 +1,12 @@
+C4Container
+    title Container Diagram — Bosch Tech Platform
+    Person(user, "End User")
+    System_Boundary(platform, "Bosch Tech Platform") {
+        Container(spa, "Micro Frontend", "React 19 · TypeScript · Vite 6 · Tailwind 4 · TanStack Query · React Router 7", "Feature modules: dashboard, products, orders — each extractable as an independent MFE")
+        Container(product, "Product Service", "Java 17 · Spring Boot 3.2 · Actuator · Jakarta Validation", "REST API on :8080 · /actuator/health")
+        Container(order, "Order Service", "Java 17 · Spring Boot 3.2 · Actuator · Jakarta Validation", "REST API on :8081 · /actuator/health")
+    }
+    Rel(user, spa, "HTTPS")
+    Rel(spa, product, "/api/products/*", "JSON/HTTPS · CORS")
+    Rel(spa, order, "/api/orders/*", "JSON/HTTPS · CORS")
+    Rel(order, product, "product lookup", "JSON/HTTPS")
