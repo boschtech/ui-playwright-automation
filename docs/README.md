@@ -206,30 +206,30 @@ Every colour-coded stage below is enforced by CI and must be **green** to merge.
 
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 30, 'rankSpacing': 60, 'padding': 15}, 'themeVariables': {'fontSize': '18px'}}}%%
-flowchart TB
+flowchart LR
     classDef g fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000,font-size:16px,padding:12px
     classDef grp fill:#f4faf1,stroke:#6aa84f,stroke-width:2px,color:#000,font-size:20px,font-weight:bold
 
     subgraph MF["🖥️  Micro Frontend"]
-      direction LR
+      direction TB
       mf1[ESLint 9]:::g --> mf2["TypeScript strict<br/>tsc --noEmit"]:::g --> mf3["Vitest unit<br/>+ v8 coverage"]:::g --> mf4["Component tests<br/>Testing Library"]:::g --> mf5["Pact consumer<br/>contracts"]:::g --> mf6[vite build]:::g --> mf7[Playwright E2E]:::g
     end
 
     subgraph PS["☕  Product Service"]
-      direction LR
+      direction TB
       ps1[JUnit 5 unit]:::g --> ps2[JaCoCo coverage]:::g --> ps3[Spring validation]:::g --> ps4["Pact consumer<br/>+ provider verify"]:::g --> ps5["Spring Boot<br/>component tests"]:::g --> ps6["Playwright<br/>@product-service"]:::g --> ps7["Actuator<br/>health gate"]:::g
     end
 
     subgraph OS["📦  Order Service"]
-      direction LR
+      direction TB
       os1[JUnit 5 unit]:::g --> os2[JaCoCo coverage]:::g --> os3[Spring validation]:::g --> os4["Pact consumer<br/>+ provider verify"]:::g --> os5["Spring Boot<br/>component tests"]:::g --> os6["Playwright<br/>@order-service"]:::g --> os7["Actuator<br/>health gate"]:::g
     end
 
     class MF,PS,OS grp
 
-    %% Invisible links force vertical stacking of the three subgraphs
-    mf7 ~~~ ps1
-    ps7 ~~~ os1
+    %% Invisible links force the three subgraphs to sit next to each other (LR)
+    MF ~~~ PS
+    PS ~~~ OS
 ```
 
 ---
