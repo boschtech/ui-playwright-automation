@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bosch Tech Platform — Micro-Frontend + Microservices Portfolio</title>
+    <meta
+      name="description"
+      content="A production-grade micro-frontend with two Spring Boot microservices and a full multi-layer quality-gate pipeline — built by Garth Bosch."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>⚙️</text></svg>"
+    />
+
+    <style>
+      :root {
+        --bg: #0b0f17;
+        --bg-elev: #131a26;
+        --bg-card: #172030;
+        --fg: #e6edf3;
+        --fg-muted: #9aa7b8;
+        --accent: #6ee7b7;
+        --accent-2: #60a5fa;
+        --border: #253246;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        --radius: 14px;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f9fc;
+          --bg-elev: #ffffff;
+          --bg-card: #ffffff;
+          --fg: #0f172a;
+          --fg-muted: #475569;
+          --accent: #059669;
+          --accent-2: #2563eb;
+          --border: #e2e8f0;
+          --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: var(--accent-2);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .container {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ——— Top nav ——— */
+      nav.top {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: color-mix(in oklab, var(--bg) 85%, transparent);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+      }
+      nav.top .inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 24px;
+        max-width: 1120px;
+        margin: 0 auto;
+      }
+      nav.top .brand {
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      nav.top .brand span {
+        color: var(--accent);
+      }
+      nav.top ul {
+        list-style: none;
+        display: flex;
+        gap: 20px;
+        margin: 0;
+        padding: 0;
+      }
+      nav.top ul a {
+        color: var(--fg-muted);
+        font-size: 14px;
+      }
+      nav.top ul a:hover {
+        color: var(--fg);
+        text-decoration: none;
+      }
+
+      /* ——— Hero ——— */
+      header.hero {
+        padding: 96px 0 72px;
+        border-bottom: 1px solid var(--border);
+        background:
+          radial-gradient(
+            1200px 400px at 80% -10%,
+            color-mix(in oklab, var(--accent) 30%, transparent),
+            transparent 60%
+          ),
+          radial-gradient(
+            800px 300px at 0% 0%,
+            color-mix(in oklab, var(--accent-2) 25%, transparent),
+            transparent 60%
+          );
+      }
+      header.hero h1 {
+        font-size: clamp(32px, 5vw, 56px);
+        margin: 0 0 16px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+      }
+      header.hero p.lead {
+        font-size: clamp(17px, 1.8vw, 20px);
+        color: var(--fg-muted);
+        max-width: 780px;
+        margin: 0 0 28px;
+      }
+      header.hero .cta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        border: 1px solid var(--border);
+        background: var(--bg-elev);
+        color: var(--fg);
+        transition: transform 0.15s ease, border-color 0.15s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        text-decoration: none;
+        border-color: var(--accent);
+      }
+      .btn.primary {
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent-2) 100%
+        );
+        color: #06111e;
+        border-color: transparent;
+      }
+      .btn.primary:hover {
+        border-color: transparent;
+      }
+
+      .kpis {
+        margin-top: 40px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+      .kpi {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+      }
+      .kpi .n {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .kpi .l {
+        color: var(--fg-muted);
+        font-size: 13px;
+      }
+
+      /* ——— Section ——— */
+      section {
+        padding: 72px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      section h2 {
+        font-size: clamp(24px, 3vw, 32px);
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+      }
+      section .sub {
+        color: var(--fg-muted);
+        margin: 0 0 32px;
+      }
+
+      /* ——— Card grid ——— */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 22px;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .card p {
+        color: var(--fg-muted);
+        font-size: 14px;
+        margin: 0;
+        flex: 1;
+      }
+      .card .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .tag {
+        font-size: 11px;
+        padding: 3px 8px;
+        background: color-mix(in oklab, var(--accent) 15%, transparent);
+        color: var(--accent);
+        border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+        border-radius: 999px;
+      }
+      .tag.blue {
+        background: color-mix(in oklab, var(--accent-2) 15%, transparent);
+        color: var(--accent-2);
+        border-color: color-mix(in oklab, var(--accent-2) 40%, transparent);
+      }
+      .card .links {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .card .links a {
+        font-size: 13px;
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--fg);
+      }
+      .card .links a:hover {
+        border-color: var(--accent);
+        text-decoration: none;
+      }
+
+      /* ——— Quality gates ——— */
+      .gates {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .gate {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+      }
+      .gate h4 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        color: var(--accent);
+      }
+      .gate ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--fg-muted);
+        font-size: 14px;
+      }
+      .gate ul li {
+        margin: 4px 0;
+      }
+
+      /* ——— Mermaid ——— */
+      .mermaid-wrap {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        overflow-x: auto;
+        box-shadow: var(--shadow);
+      }
+      .mermaid {
+        text-align: center;
+      }
+
+      /* ——— Demo ——— */
+      .demo {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        background: var(--bg-card);
+        border: 1px dashed var(--border);
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .demo iframe,
+      .demo video {
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+      .demo-placeholder {
+        text-align: center;
+        padding: 24px;
+      }
+      .demo-placeholder .icon {
+        font-size: 56px;
+      }
+      .demo-placeholder .title {
+        font-size: 18px;
+        margin-top: 8px;
+      }
+      .demo-placeholder .hint {
+        color: var(--fg-muted);
+        font-size: 13px;
+        margin-top: 6px;
+        max-width: 420px;
+      }
+      .demo-placeholder code {
+        background: var(--bg-elev);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      /* ——— Footer ——— */
+      footer {
+        padding: 48px 0;
+        color: var(--fg-muted);
+        font-size: 14px;
+      }
+      footer .row {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      @media (max-width: 640px) {
+        nav.top ul {
+          display: none;
+        }
+        header.hero {
+          padding: 64px 0 48px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="top">
+      <div class="inner">
+        <div class="brand">Bosch<span>·</span>Tech</div>
+        <ul>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#projects">Projects</a></li>
+          <li><a href="#quality">Quality</a></li>
+          <li><a href="#demo">Demo</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="container">
+        <h1>Production-grade micro-frontend &amp; microservices, built with quality in mind.</h1>
+        <p class="lead">
+          A React 19 micro-frontend backed by two Spring Boot services, wired
+          together with consumer-driven contracts, stacked unit / component /
+          E2E tests, and automated deploys — all gated by CI.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="#demo">Watch the demo</a>
+          <a class="btn" href="#architecture">See the architecture</a>
+          <a class="btn" href="#projects">Browse the code</a>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="n">3</div><div class="l">Independently deployed services</div></div>
+          <div class="kpi"><div class="n">5</div><div class="l">CI quality-gate stages</div></div>
+          <div class="kpi"><div class="n">4</div><div class="l">Pact contracts verified</div></div>
+          <div class="kpi"><div class="n">7</div><div class="l">Gates per service</div></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ——— Architecture ——— -->
+    <section id="architecture">
+      <div class="container">
+        <h2>Architecture at a glance</h2>
+        <p class="sub">
+          Three independently deployable units, one coherent platform.
+        </p>
+
+        <div class="mermaid-wrap">
+          <div class="mermaid">
+C4Context
+    title System Context — Bosch Tech Platform
+    Person(customer, "End User", "Browses products and places orders")
+    System_Boundary(platform, "Bosch Tech Platform") {
+      System(mfe, "Micro Frontend", "React 19 SPA")
+      System(product, "Product Service", "Spring Boot REST API")
+      System(order, "Order Service", "Spring Boot REST API")
+    }
+    System_Ext(render, "Render.com", "Static + Docker hosting")
+    System_Ext(gh, "GitHub Actions", "CI / CD")
+    Rel(customer, mfe, "Uses", "HTTPS")
+    Rel(mfe, product, "Reads/writes", "JSON/HTTPS")
+    Rel(mfe, order, "Reads/writes", "JSON/HTTPS")
+    Rel(order, product, "Validates product IDs", "JSON/HTTPS")
+    Rel(mfe, render, "Deployed to")
+    Rel(product, render, "Deployed to")
+    Rel(order, render, "Deployed to")
+    Rel(gh, render, "Triggers deploy")
+          </div>
+        </div>
+
+        <p style="margin-top: 16px;">
+          👉 Full diagram set:
+          <a href="../README.md">architecture docs (9 Mermaid diagrams)</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ——— Projects ——— -->
+    <section id="projects">
+      <div class="container">
+        <h2>The three (plus one) repos</h2>
+        <p class="sub">
+          Each service stands alone, is CI-gated on its own repo, and deploys
+          independently.
+        </p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>🖥️ Micro Frontend</h3>
+            <p>
+              React 19 SPA with feature modules for dashboard, products &amp;
+              orders — each designed to be extractable as its own MFE.
+            </p>
+            <div class="tags">
+              <span class="tag">React 19</span>
+              <span class="tag">Vite 6</span>
+              <span class="tag">TanStack Query</span>
+              <span class="tag">Tailwind 4</span>
+              <span class="tag">TypeScript</span>
+            </div>
+            <div class="links">
+              <a href="https://github.com/boschtech/micro-frontend" target="_blank" rel="noopener">GitHub</a>
+              <a href="#" target="_blank" rel="noopener">Live site</a>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>☕ Product Service</h3>
+            <p>
+              Spring Boot REST API for the product catalog. CORS-configured
+              for MFE consumption; exposes Actuator health endpoints.
+            </p>
+            <div class="tags">
+              <span class="tag blue">Java 17</span>
+              <span class="tag blue">Spring Boot 3.2</span>
+              <span class="tag blue">JaCoCo</span>
+              <span class="tag blue">Pact</span>
+            </div>
+            <div class="links">
+              <a href="https://github.com/boschtech/product-service" target="_blank" rel="noopener">GitHub</a>
+              <a href="https://product-service-ua20.onrender.com/actuator/health" target="_blank" rel="noopener">Health check</a>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>📦 Order Service</h3>
+            <p>
+              Spring Boot REST API for order management. Validates products via
+              the Product Service and mirrors its quality gates.
+            </p>
+            <div class="tags">
+              <span class="tag blue">Java 17</span>
+              <span class="tag blue">Spring Boot 3.2</span>
+              <span class="tag blue">JaCoCo</span>
+              <span class="tag blue">Pact</span>
+            </div>
+            <div class="links">
+              <a href="https://github.com/boschtech/order-service" target="_blank" rel="noopener">GitHub</a>
+              <a href="https://order-service-7342.onrender.com/actuator/health" target="_blank" rel="noopener">Health check</a>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>🎭 UI Automation</h3>
+            <p>
+              End-to-end Playwright suite that exercises the full stack. Tagged
+              specs keep each service's CI fast while covering its own flows.
+            </p>
+            <div class="tags">
+              <span class="tag">Playwright 1.52</span>
+              <span class="tag">TypeScript</span>
+              <span class="tag">GitHub Pages</span>
+            </div>
+            <div class="links">
+              <a href="https://github.com/boschtech/ui-playwright-automation" target="_blank" rel="noopener">GitHub</a>
+              <a href="https://boschtech.github.io/ui-playwright-automation/" target="_blank" rel="noopener">Latest report</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ——— Quality gates ——— -->
+    <section id="quality">
+      <div class="container">
+        <h2>Quality gates — every change, every merge</h2>
+        <p class="sub">
+          Five CI stages, seven gates per service. A red check blocks the PR.
+        </p>
+
+        <div class="gates">
+          <div class="gate">
+            <h4>🔍 Static analysis</h4>
+            <ul>
+              <li>ESLint 9 (MFE)</li>
+              <li>TypeScript strict (<code>tsc --noEmit</code>)</li>
+              <li>Spring Jakarta Validation</li>
+            </ul>
+          </div>
+          <div class="gate">
+            <h4>🧪 Unit &amp; coverage</h4>
+            <ul>
+              <li>Vitest + <code>@vitest/coverage-v8</code></li>
+              <li>JUnit 5 + JaCoCo</li>
+              <li>Coverage artifacts uploaded on every run</li>
+            </ul>
+          </div>
+          <div class="gate">
+            <h4>🧩 Component tests</h4>
+            <ul>
+              <li>React Testing Library (MFE)</li>
+              <li>Spring Boot HTTP tests (services)</li>
+            </ul>
+          </div>
+          <div class="gate">
+            <h4>📄 Consumer-driven contracts</h4>
+            <ul>
+              <li>Pact 4.6 — 4 contracts, both directions</li>
+              <li>Consumer generation + provider verification</li>
+              <li>Cross-repo checkout in CI</li>
+            </ul>
+          </div>
+          <div class="gate">
+            <h4>🎭 End-to-end</h4>
+            <ul>
+              <li>Playwright against the full stack</li>
+              <li>Tagged: <code>@product-service</code>, <code>@order-service</code></li>
+              <li>HTML report auto-published to GitHub Pages</li>
+            </ul>
+          </div>
+          <div class="gate">
+            <h4>🚀 Deploy &amp; health</h4>
+            <ul>
+              <li>Render.com auto-deploy on green main</li>
+              <li>Spring Actuator <code>/actuator/health</code> gate</li>
+              <li>Build artifacts retained for audit</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ——— CI Pipeline diagram ——— -->
+    <section id="pipeline">
+      <div class="container">
+        <h2>The pipeline that proves it</h2>
+        <p class="sub">
+          Each merge runs through the full chain. Any red stage blocks the PR.
+        </p>
+
+        <div class="mermaid-wrap">
+          <div class="mermaid">
+flowchart LR
+    classDef gate fill:#0f2e24,stroke:#6ee7b7,stroke-width:2px,color:#e6edf3
+    A[🔍 Lint + Typecheck]:::gate --> B[🧪 Unit Tests<br/>+ coverage]:::gate
+    B --> C[🧩 Component Tests]:::gate
+    B --> D[📄 Contract Tests<br/>Pact]:::gate
+    C --> E[🏗️ Build]:::gate
+    D --> E
+    E --> F[🎭 Playwright E2E]:::gate
+    F --> G[🚀 Deploy<br/>Render.com]:::gate
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ——— Demo ——— -->
+    <section id="demo">
+      <div class="container">
+        <h2>Recorded walkthrough</h2>
+        <p class="sub">
+          Five-minute demo covering the architecture, a live feature flow, and
+          a PR going through every quality gate.
+        </p>
+
+        <div class="demo">
+          <!--
+            Drop in your recording here. Pick ONE of these:
+
+            1) Loom:
+               <iframe src="https://www.loom.com/embed/YOUR_LOOM_ID" allowfullscreen></iframe>
+
+            2) YouTube (unlisted is fine):
+               <iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" allowfullscreen></iframe>
+
+            3) Self-hosted MP4 in this folder:
+               <video controls poster="poster.jpg"><source src="demo.mp4" type="video/mp4" /></video>
+          -->
+          <div class="demo-placeholder">
+            <div class="icon">🎬</div>
+            <div class="title">Add your recording here</div>
+            <div class="hint">
+              Record a 3–5 min Loom walkthrough, then replace the
+              <code>.demo-placeholder</code> block in
+              <code>index.html</code> with a
+              <code>&lt;iframe&gt;</code> or <code>&lt;video&gt;</code> tag.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ——— Contact ——— -->
+    <section id="contact">
+      <div class="container">
+        <h2>Let's talk</h2>
+        <p class="sub">
+          Interested in a similar build, or want a deeper dive into how the
+          gates were put together? I'd love to hear from you.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="mailto:hello@example.com">Email me</a>
+          <a class="btn" href="https://github.com/boschtech" target="_blank" rel="noopener">GitHub</a>
+          <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container row">
+        <div>© <span id="year"></span> Garth Bosch · Bosch Tech platform</div>
+        <div>
+          Built with plain HTML + CSS + <a href="https://mermaid.js.org/" target="_blank" rel="noopener">Mermaid</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: isDark ? "dark" : "default",
+        securityLevel: "loose",
+        themeVariables: {
+          fontFamily:
+            'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto',
+        },
+      });
+      document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
