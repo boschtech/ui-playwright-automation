@@ -213,11 +213,11 @@ flowchart TB
     end
 
     subgraph PS["Product Service"]
-      ps1[JUnit 5 unit]:::g --> ps2[JaCoCo coverage]:::g --> ps3[Spring validation]:::g --> ps4[Pact consumer<br/>+ provider verify]:::g --> ps5[Spring Boot<br/>component tests]:::g --> ps6[Playwright<br/>@product-service]:::g --> ps7[Actuator<br/>health gate]:::g
+      ps1[JUnit 5 unit]:::g --> ps2[JaCoCo coverage]:::g --> ps3[Spring validation]:::g --> ps4[Pact consumer<br/>+ provider verify]:::g --> ps5[Spring Boot<br/>component tests]:::g --> ps6["Playwright<br/>@product-service"]:::g --> ps7[Actuator<br/>health gate]:::g
     end
 
     subgraph OS["Order Service"]
-      os1[JUnit 5 unit]:::g --> os2[JaCoCo coverage]:::g --> os3[Spring validation]:::g --> os4[Pact consumer<br/>+ provider verify]:::g --> os5[Spring Boot<br/>component tests]:::g --> os6[Playwright<br/>@order-service]:::g --> os7[Actuator<br/>health gate]:::g
+      os1[JUnit 5 unit]:::g --> os2[JaCoCo coverage]:::g --> os3[Spring validation]:::g --> os4[Pact consumer<br/>+ provider verify]:::g --> os5[Spring Boot<br/>component tests]:::g --> os6["Playwright<br/>@order-service"]:::g --> os7[Actuator<br/>health gate]:::g
     end
 ```
 
