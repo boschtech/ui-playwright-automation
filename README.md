@@ -239,6 +239,49 @@ Exits with code 1 if any `error`-severity violations are found.
 
 ---
 
+### AI Module Unit Tests
+
+The AI modules have a comprehensive unit test suite built with [Vitest](https://vitest.dev/). All tests mock the Claude API, so they run without an API key and complete in under 1 second.
+
+```bash
+# Run the full AI unit test suite
+npm run test:ai
+
+# Run in watch mode during development
+npm run test:ai:watch
+```
+
+**56 tests** across **12 test files** covering:
+
+| Test file | What it verifies |
+|-----------|------------------|
+| `client.test.ts` | API key validation, `ask()`/`askJSON()` response parsing, markdown fence stripping |
+| `config.test.ts` | Model defaults, thresholds, paths, kill-switch, team mappings |
+| `ai-reporter.test.ts` | Passed/failed recording, error capture, screenshot/trace paths, history appending |
+| `regression-selector.test.ts` | `toPlaywrightArgs` for all selection scenarios, empty diff handling |
+| `rca-analyzer.test.ts` | Missing report, empty failures, sequential analysis, file-based reading |
+| `test-generator.test.ts` | AI-GENERATED marker, code inclusion, requirement truncation |
+| `flaky-detector.test.ts` | Missing history, insufficient runs, flaky identification, stable exclusion |
+| `executor.test.ts` | All-pass flow, transient retry, BUG defect creation, TEST_ISSUE counting |
+| `defect-creator.test.ts` | FLAKY filtering, confidence threshold, deduplication, team assignment |
+| `cicd-optimizer.test.ts` | Recommendations, prompt content, gh CLI unavailability |
+| `coverage-analyzer.test.ts` | Gap detection, prompt structure |
+| `contract-validator.test.ts` | Missing captures, violation detection, contract inference |
+
+#### Writing New Tests
+
+Test files live in `ai/__tests__/` mirroring the module structure. Use the helpers in `ai/__tests__/helpers.ts` to create test fixtures:
+
+```bash
+# Example: adding tests for a new module
+# 1. Create ai/__tests__/modules/my-module.test.ts
+# 2. Mock the Claude client:
+vi.mock("../../client", () => ({ askJSON: vi.fn().mockResolvedValue({}) }));
+# 3. Use helpers: makeTestRecord(), makeRCAResult(), makeAPICapture(), etc.
+```
+
+---
+
 ### How the AI Reporter Works
 
 The custom Playwright reporter (`ai/reporters/ai-reporter.ts`) is registered in `playwright.config.ts` and runs automatically on every test execution. It:
@@ -246,21 +289,100 @@ The custom Playwright reporter (`ai/reporters/ai-reporter.ts`) is registered in 
 1. **Writes `ai/history/last-failures.json`** — contains details of all failed tests from the most recent run (error messages, screenshot paths, trace paths). Used by the RCA and defect creation scripts.
 2. **Appends to `ai/history/test-history.json`** — cumulative log of every run with per-test status, duration, and retry count. Used by the flaky test detector.
 
-Both files are git-ignored. In CI, they exist only for the lifetime of the workflow run.
+Both files are git-ignored. In CI, they are uploaded as the `ai-analysis-reports` artifact for post-run inspection.
 
-### CI Pipeline Integration
+---
 
-The GitHub Actions workflow (`.github/workflows/ci.yml`) includes AI steps that run automatically when `ANTHROPIC_API_KEY` is configured:
+### CI Pipeline Architecture
 
-| Step | When | What it does |
-|------|------|--------------|
-| Smart Regression Selection | Before tests | Determines `--grep` filter from git diff |
-| Failure RCA | On test failure | Classifies each failure |
-| Flaky Test Detection | Always (post-test) | Flags inconsistent tests |
-| Defect Auto-Creation | On test failure | Creates GitHub issues for confirmed bugs |
-| API Contract Validation | Always (post-test) | Validates API responses |
+The GitHub Actions workflow (`.github/workflows/ci.yml`) is structured as three sequential jobs:
 
-All AI steps use `|| true` to ensure they never block the pipeline. If the `ANTHROPIC_API_KEY` secret is not set, the steps are skipped entirely.
+```
+ai-unit-tests → e2e-tests → publish-report
+     (~15s)       (~5-8min)      (~30s)
+```
+
+**Job 1: `ai-unit-tests`** — Fast gate that runs the vitest suite. Fails the pipeline early if any AI module is broken, before spending time on the heavyweight E2E job. No services, browsers, or API keys required.
+
+**Job 2: `e2e-tests`** — Builds and starts all services, runs Playwright tests, then runs the AI analysis pipeline:
+
+| Step | Condition | What it does |
+|------|-----------|-------|
+| AI - Smart Regression Selection | `ANTHROPIC_API_KEY` set | Determines `--grep` filter from git diff |
+| Run All E2E Tests | Always | Runs the Playwright test suite |
+| AI - Failure RCA | On test failure | Classifies each failure |
+| AI - Flaky Test Detection | Always (post-test) | Flags inconsistent tests |
+| AI - Auto-Create Defects | On test failure | Creates GitHub issues for confirmed bugs |
+| AI - Validate API Contracts | Always (post-test) | Validates API responses |
+| Upload AI Analysis Reports | Always | Saves history + contracts as artifact |
+
+**Job 3: `publish-report`** — Deploys the Playwright HTML report to GitHub Pages (main branch only).
+
+All AI steps are gated behind the `ANTHROPIC_API_KEY` secret. If it's not configured, the steps are silently skipped. All AI steps use `|| true` to ensure they never block the pipeline.
+
+#### CI Artifacts
+
+| Artifact | Retention | Contents |
+|----------|-----------|----------|
+| `playwright-report` | 14 days | HTML test report |
+| `e2e-test-results` | 14 days | Raw Playwright results (traces, screenshots) |
+| `ai-analysis-reports` | 14 days | `ai/history/` (failures, run history) + `ai/contracts/` |
+| `service-logs` | 7 days | Backend service stdout/stderr logs |
+
+---
+
+### Usage Workflow
+
+Here is the recommended day-to-day workflow for using the AI platform:
+
+#### For developers (on every PR)
+
+1. **Write code** and push to a feature branch.
+2. CI runs automatically:
+   - `ai-unit-tests` validates the AI modules (~15s).
+   - `e2e-tests` runs Playwright against the full stack.
+   - If `ANTHROPIC_API_KEY` is configured, AI analysis runs automatically post-test.
+3. **If tests fail**, check the CI logs for RCA output — it tells you whether the failure is a bug, a flaky test, or an environment issue.
+4. **If a defect is created**, a GitHub issue appears automatically with reproduction steps.
+
+#### For QA engineers (periodic)
+
+1. **Find coverage gaps** — run `npm run ai:coverage-gaps` to discover untested features, then use `npm run ai:generate` to scaffold tests for them.
+2. **Identify flaky tests** — after several runs, `npm run ai:flaky` highlights unreliable tests with fix recommendations.
+3. **Optimize the pipeline** — run `npm run ai:optimize-cicd` periodically to get actionable CI improvements.
+4. **Validate API contracts** — run `npm run ai:validate-contracts` after backend changes to catch breaking contract changes.
+
+#### For generating new tests
+
+```bash
+# 1. Generate from a requirement
+npm run ai:generate -- --requirement "Users can sort the product list by price"
+
+# 2. Review the output
+cat e2e/tests/users-can-sort-the-product-list-by.spec.ts
+
+# 3. Run the new test
+npm run test:e2e -- --grep "sort"
+
+# 4. Run the unit tests to make sure nothing is broken
+npm run test:ai
+```
+
+#### For investigating failures
+
+```bash
+# 1. Run tests (failures are captured by the AI reporter automatically)
+npm run test:e2e
+
+# 2. Analyze what went wrong
+npm run ai:rca
+
+# 3. Preview defect issues without creating them
+npm run ai:create-defects -- --dry-run
+
+# 4. Create issues for confirmed bugs
+npm run ai:create-defects
+```
 
 ---
 
@@ -298,6 +420,12 @@ ui-playwright-automation/
 │   ├── client.ts                    # Shared Claude API client (with prompt caching)
 │   ├── config.ts                    # AI configuration (model, thresholds, paths)
 │   ├── types.ts                     # Shared TypeScript interfaces
+│   ├── __tests__/                   # AI module unit tests (vitest)
+│   │   ├── helpers.ts               # Test factories and shared fixtures
+│   │   ├── client.test.ts           # Client wrapper tests
+│   │   ├── config.test.ts           # Configuration tests
+│   │   ├── modules/                 # Per-module tests (9 files)
+│   │   └── reporters/               # Reporter tests
 │   ├── reporters/
 │   │   └── ai-reporter.ts           # Custom Playwright reporter (history + failures)
 │   ├── fixtures/
