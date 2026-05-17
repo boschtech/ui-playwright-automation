@@ -1,0 +1,225 @@
+name: Scheduled AI Analysis
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs weekly (Monday 07:00 UTC) and on demand.
+# Does NOT run E2E tests — it analyses the accumulated test intelligence
+# (history, contracts, coverage) and surfaces actionable insights:
+#
+#   1. Test Coverage Gap Analysis  — finds untested features/flows
+#   2. CI/CD Pipeline Optimisation — recommends pipeline improvements
+#   3. Flaky Test Re-evaluation    — re-classifies flaky tests with fresh data
+#
+# Requires:  ANTHROPIC_API_KEY repository secret
+# Optional:  CROSS_REPO_TOKEN   (needed to clone other repos for context)
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    # Every Monday at 07:00 UTC
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      analysis:
+        description: "Which analyses to run (comma-separated: coverage,cicd,flaky,all)"
+        required: false
+        default: "all"
+
+concurrency:
+  group: ai-analysis-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-analysis:
+    name: AI Test Intelligence Analysis
+    runs-on: ubuntu-latest
+    # Skip if the API key is not configured — no point running without AI
+    if: vars.ANTHROPIC_API_KEY != '' || secrets.ANTHROPIC_API_KEY != ''
+
+    permissions:
+      contents: write       # needed to commit generated test stubs (optional)
+      issues: write         # needed to open coverage-gap issues
+      pull-requests: write  # needed to open a PR with generated tests
+
+    steps:
+      - name: Checkout ui-playwright-automation
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so the regression selector can diff branches
+          fetch-depth: 0
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Restore accumulated history and contracts from the reactive pipeline ──
+      # This gives the AI meaningful data even though no E2E run is happening.
+      - name: Restore AI history/contracts cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ai/history
+            ai/contracts
+          # Fall back through branch → main so we always get the most recent data
+          key: ai-data-${{ github.ref_name }}-placeholder
+          restore-keys: |
+            ai-data-${{ github.ref_name }}-
+            ai-data-main-
+
+      # ── 1. Test Coverage Gap Analysis ──────────────────────────────────────
+      - name: AI - Test Coverage Gap Analysis
+        if: >
+          inputs.analysis == 'all' ||
+          contains(inputs.analysis, 'coverage') ||
+          github.event_name == 'schedule'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "## 🔎 Coverage Gap Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          OUTPUT=$(npx tsx ai/scripts/analyze-coverage.ts --json 2>/dev/null || echo "[]")
+          echo "$OUTPUT" > /tmp/coverage-gaps.json
+          # Pretty-print count
+          COUNT=$(echo "$OUTPUT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8'); try{console.log(JSON.parse(d).length)}catch{console.log(0)}")
+          echo "Found **${COUNT}** coverage gap(s). See artifact \`ai-analysis-report\` for details." >> $GITHUB_STEP_SUMMARY
+
+      # ── 2. CI/CD Pipeline Optimisation ────────────────────────────────────
+      - name: AI - CI/CD Optimisation Analysis
+        if: >
+          inputs.analysis == 'all' ||
+          contains(inputs.analysis, 'cicd') ||
+          github.event_name == 'schedule'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## ⚙️ CI/CD Optimisation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          OUTPUT=$(npx tsx ai/scripts/optimize-cicd.ts --json 2>/dev/null || echo "[]")
+          echo "$OUTPUT" > /tmp/cicd-recommendations.json
+          COUNT=$(echo "$OUTPUT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8'); try{console.log(JSON.parse(d).length)}catch{console.log(0)}")
+          echo "Found **${COUNT}** optimisation recommendation(s). See artifact \`ai-analysis-report\` for details." >> $GITHUB_STEP_SUMMARY
+
+      # ── 3. Flaky Test Re-evaluation ────────────────────────────────────────
+      - name: AI - Flaky Test Re-evaluation
+        if: >
+          inputs.analysis == 'all' ||
+          contains(inputs.analysis, 'flaky') ||
+          github.event_name == 'schedule'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "## 🎲 Flaky Test Re-evaluation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          OUTPUT=$(npx tsx ai/scripts/detect-flaky.ts --json 2>/dev/null || echo "[]")
+          echo "$OUTPUT" > /tmp/flaky-tests.json
+          COUNT=$(echo "$OUTPUT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8'); try{console.log(JSON.parse(d).length)}catch{console.log(0)}")
+          echo "Found **${COUNT}** flaky test(s). See artifact \`ai-analysis-report\` for details." >> $GITHUB_STEP_SUMMARY
+
+      # ── 4. Auto-generate test stubs for high-priority coverage gaps ──────
+      # Reads the coverage gap JSON from step 1 and generates spec stubs for
+      # any HIGH priority gaps, committing them to a branch for review.
+      - name: AI - Auto-generate tests for high-priority gaps
+        if: >
+          (inputs.analysis == 'all' || contains(inputs.analysis, 'coverage')) &&
+          github.event_name == 'schedule'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Extract high-priority gaps and generate stubs for each
+          HIGH_GAPS=$(node -e "
+            const gaps = JSON.parse(require('fs').readFileSync('/tmp/coverage-gaps.json', 'utf8') || '[]');
+            const high = gaps.filter(g => g.priority === 'high').slice(0, 3); // max 3 per run
+            high.forEach(g => console.log(g.suggestedTest));
+          " 2>/dev/null || true)
+
+          if [ -z "$HIGH_GAPS" ]; then
+            echo "No high-priority gaps to generate tests for."
+            exit 0
+          fi
+
+          GENERATED=0
+          while IFS= read -r requirement; do
+            [ -z "$requirement" ] && continue
+            npx tsx ai/scripts/generate-tests.ts --requirement "$requirement" 2>/dev/null && GENERATED=$((GENERATED + 1)) || true
+          done <<< "$HIGH_GAPS"
+
+          echo "Generated ${GENERATED} test stub(s)." >> $GITHUB_STEP_SUMMARY
+
+      # ── 5. Bundle all reports into a single artifact ───────────────────────
+      - name: Collect analysis reports
+        if: always()
+        run: |
+          mkdir -p /tmp/ai-analysis-report
+          cp /tmp/coverage-gaps.json       /tmp/ai-analysis-report/ 2>/dev/null || echo "[]" > /tmp/ai-analysis-report/coverage-gaps.json
+          cp /tmp/cicd-recommendations.json /tmp/ai-analysis-report/ 2>/dev/null || echo "[]" > /tmp/ai-analysis-report/cicd-recommendations.json
+          cp /tmp/flaky-tests.json          /tmp/ai-analysis-report/ 2>/dev/null || echo "[]" > /tmp/ai-analysis-report/flaky-tests.json
+          # Include any generated test stubs
+          cp -r e2e/tests/*.spec.ts /tmp/ai-analysis-report/ 2>/dev/null || true
+
+      - name: Upload AI analysis report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-analysis-report
+          path: /tmp/ai-analysis-report/
+          retention-days: 30
+
+      # ── 6. Open a GitHub issue summarising coverage gaps (weekly only) ────
+      - name: Open coverage gap issue
+        if: >
+          github.event_name == 'schedule' &&
+          env.ANTHROPIC_API_KEY != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COUNT=$(node -e "
+            try {
+              const gaps = JSON.parse(require('fs').readFileSync('/tmp/coverage-gaps.json','utf8'));
+              const high = gaps.filter(g => g.priority === 'high').length;
+              const med  = gaps.filter(g => g.priority === 'medium').length;
+              const low  = gaps.filter(g => g.priority === 'low').length;
+              console.log(gaps.length + ':' + high + ':' + med + ':' + low);
+            } catch { console.log('0:0:0:0'); }
+          " 2>/dev/null)
+
+          TOTAL=$(echo $COUNT | cut -d: -f1)
+          HIGH=$(echo $COUNT  | cut -d: -f2)
+          MED=$(echo $COUNT   | cut -d: -f3)
+          LOW=$(echo $COUNT   | cut -d: -f4)
+
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No coverage gaps found this week."
+            exit 0
+          fi
+
+          # Check if there's already an open issue for this week
+          WEEK=$(date +"%Y-W%V")
+          EXISTING=$(gh issue list --state open --search "AI Coverage Gap Report $WEEK" --json number --limit 1 2>/dev/null || echo "[]")
+          if [ "$EXISTING" != "[]" ] && [ "$EXISTING" != "" ]; then
+            echo "Coverage gap issue already exists for $WEEK."
+            exit 0
+          fi
+
+          gh issue create \
+            --title "🔎 AI Coverage Gap Report $WEEK — ${TOTAL} gap(s) found" \
+            --label "ai-analysis,test-coverage" \
+            --body "## Weekly AI Test Coverage Gap Report
+
+          **Run:** [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          **Date:** $(date -u +%Y-%m-%d)
+
+          | Priority | Count |
+          |----------|-------|
+          | 🔴 High   | $HIGH  |
+          | 🟡 Medium | $MED  |
+          | 🟢 Low    | $LOW  |
+
+          Download the full \`ai-analysis-report\` artifact from the workflow run for details and suggested tests.
+
+          Generated stubs for up to 3 high-priority gaps are attached to the workflow run artifact.
+          " || true

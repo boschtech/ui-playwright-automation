@@ -164,6 +164,21 @@ jobs:
           wait_for http://localhost:8081/actuator/health
           wait_for http://localhost:3000
 
+      # ── AI: Restore cross-run history and contracts from cache ──
+      # Keyed by branch so each branch accumulates its own history.
+      # The cache is updated at the end of every successful run via
+      # the 'Save AI history/contracts cache' step below.
+      - name: Restore AI history/contracts cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ui-playwright-automation/ai/history
+            ui-playwright-automation/ai/contracts
+          key: ai-data-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            ai-data-${{ github.ref_name }}-
+            ai-data-main-
+
       - name: Install Playwright deps
         working-directory: ui-playwright-automation
         run: npm ci
@@ -219,6 +234,22 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npx tsx ai/scripts/validate-contracts.ts || true
+
+      # ── AI: Persist api-captures.json separately so it resets each run ──
+      # History and contracts accumulate; captures are per-run only.
+      - name: Clear API captures for next run
+        if: always()
+        working-directory: ui-playwright-automation
+        run: rm -f ai/history/api-captures.json || true
+
+      - name: Save AI history/contracts cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ui-playwright-automation/ai/history
+            ui-playwright-automation/ai/contracts
+          key: ai-data-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Upload AI Analysis Reports
         if: always()

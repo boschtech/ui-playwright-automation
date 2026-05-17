@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../ai/fixtures/api-monitor";
 import { DashboardPage } from "../pages/dashboard.page";
 
 test.describe("Dashboard", () => {

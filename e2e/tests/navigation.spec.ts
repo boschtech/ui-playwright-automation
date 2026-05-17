@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../ai/fixtures/api-monitor";
 import { NavbarPage } from "../pages/navbar.page";
 
 test.describe("Navigation & Layout", () => {

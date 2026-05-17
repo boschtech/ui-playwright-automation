@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../ai/fixtures/api-monitor";
 import { ProductsPage, ProductDetailPage } from "../pages/products.page";
 import { buildProduct } from "../fixtures/test-data";
 
