@@ -10,8 +10,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 10 : undefined,
   reporter: process.env.CI
-    ? [["html", { open: "never" }], ["github"]]
-    : [["html", { open: "on-failure" }]],
+    ? [["html", { open: "never" }], ["github"], ["./ai/reporters/ai-reporter.ts"]]
+    : [["html", { open: "on-failure" }], ["./ai/reporters/ai-reporter.ts"]],
   use: {
     baseURL,
     trace: "on-first-retry",

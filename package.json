@@ -8,10 +8,25 @@
     "test:e2e:products": "playwright test --grep @product-service",
     "test:e2e:orders": "playwright test --grep @order-service",
     "test:e2e:all": "playwright test",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "ai:generate": "tsx ai/scripts/generate-tests.ts",
+    "ai:select-regression": "tsx ai/scripts/select-regression.ts",
+    "ai:run": "tsx ai/scripts/run-autonomous.ts",
+    "ai:rca": "tsx ai/scripts/analyze-failures.ts",
+    "ai:flaky": "tsx ai/scripts/detect-flaky.ts",
+    "ai:optimize-cicd": "tsx ai/scripts/optimize-cicd.ts",
+    "ai:create-defects": "tsx ai/scripts/create-defects.ts",
+    "ai:coverage-gaps": "tsx ai/scripts/analyze-coverage.ts",
+    "ai:validate-contracts": "tsx ai/scripts/validate-contracts.ts",
+    "test:ai": "vitest run",
+    "test:ai:watch": "vitest"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
+    "@octokit/rest": "^22.0.1",
     "@playwright/test": "^1.52.0",
-    "typescript": "~5.7.0"
+    "tsx": "^4.22.1",
+    "typescript": "~5.7.0",
+    "vitest": "^3.2.4"
   }
 }

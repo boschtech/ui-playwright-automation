@@ -8,3 +8,7 @@ blob-report/
 .DS_Store
 .env
 .env.local
+
+# AI platform generated data
+ai/history/
+ai/contracts/

@@ -147,12 +147,53 @@ jobs:
         working-directory: ui-playwright-automation
         run: npx playwright install --with-deps
 
+      # ── AI: Smart regression selection (optional) ──
+      - name: AI - Smart Regression Selection
+        if: env.ANTHROPIC_API_KEY != ''
+        working-directory: ui-playwright-automation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          GREP_ARGS=$(npx tsx ai/scripts/select-regression.ts --output-args 2>/dev/null || true)
+          echo "AI_GREP_ARGS=$GREP_ARGS" >> $GITHUB_ENV
+          echo "Regression selection: $GREP_ARGS"
+
       - name: Run All E2E Tests
         working-directory: ui-playwright-automation
         env:
           E2E_BASE_URL: http://localhost:3000
           CI: true
-        run: npx playwright test
+        run: npx playwright test ${{ env.AI_GREP_ARGS }}
+
+      # ── AI: Post-test analysis pipeline ──
+      - name: AI - Failure RCA
+        if: failure() && env.ANTHROPIC_API_KEY != ''
+        working-directory: ui-playwright-automation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npx tsx ai/scripts/analyze-failures.ts || true
+
+      - name: AI - Flaky Test Detection
+        if: always() && env.ANTHROPIC_API_KEY != ''
+        working-directory: ui-playwright-automation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npx tsx ai/scripts/detect-flaky.ts || true
+
+      - name: AI - Auto-Create Defects
+        if: failure() && env.ANTHROPIC_API_KEY != ''
+        working-directory: ui-playwright-automation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx tsx ai/scripts/create-defects.ts || true
+
+      - name: AI - Validate API Contracts
+        if: always() && env.ANTHROPIC_API_KEY != ''
+        working-directory: ui-playwright-automation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npx tsx ai/scripts/validate-contracts.ts || true
 
       # - name: Run Playwright Tests
       #   env:
