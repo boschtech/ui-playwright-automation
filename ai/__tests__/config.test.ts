@@ -7,7 +7,7 @@ describe("config", () => {
 
   it("has the expected model configured", async () => {
     const { aiConfig } = await import("../config");
-    expect(aiConfig.model).toBe("claude-sonnet-4-20250514");
+    expect(aiConfig.model).toBe("claude-sonnet-4-5-20250929");
   });
 
   it("is enabled by default", async () => {

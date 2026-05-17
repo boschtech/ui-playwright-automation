@@ -1,8 +1,9 @@
 import path from "node:path";
+import "./load-env";
 
 export const aiConfig = {
   /** Claude model to use for all AI features. */
-  model: "claude-sonnet-4-20250514" as const,
+  model: "claude-sonnet-4-5-20250929" as const,
 
   /** Master kill-switch: set AI_FEATURES_ENABLED=false to disable all AI steps. */
   enabled: process.env.AI_FEATURES_ENABLED !== "false",
