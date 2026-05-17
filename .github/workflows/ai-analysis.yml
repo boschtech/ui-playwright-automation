@@ -27,9 +27,6 @@ concurrency:
   group: ai-analysis-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   ai-analysis:
     name: AI Test Intelligence Analysis
@@ -44,13 +41,13 @@ jobs:
 
     steps:
       - name: Checkout ui-playwright-automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # Fetch full history so the regression selector can diff branches
           fetch-depth: 0
 
       - name: Setup Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -61,7 +58,7 @@ jobs:
       # ── Restore accumulated history and contracts from the reactive pipeline ──
       # This gives the AI meaningful data even though no E2E run is happening.
       - name: Restore AI history/contracts cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ai/history
@@ -165,7 +162,7 @@ jobs:
 
       - name: Upload AI analysis report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ai-analysis-report
           path: /tmp/ai-analysis-report/
