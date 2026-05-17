@@ -17,6 +17,11 @@ export function getClient(): Anthropic {
   return _client;
 }
 
+/** @internal For unit tests only — resets the cached client to null. */
+export function _resetClientForTesting(): void {
+  _client = null;
+}
+
 /**
  * Send a prompt to Claude and return the text response.
  * Wraps the Messages API with sensible defaults and prompt caching

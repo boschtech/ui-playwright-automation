@@ -18,13 +18,19 @@ async function main() {
   const baseBranch = baseIdx !== -1 && args[baseIdx + 1] ? args[baseIdx + 1] : "main";
   const outputArgs = args.includes("--output-args");
 
-  console.log(`🔍 Analyzing changes against ${baseBranch}...\n`);
+  // In --output-args mode stdout must be clean (captured by CI shell substitution).
+  // Send all human-readable status to stderr so it never pollutes GREP_ARGS.
+  const log = outputArgs
+    ? (...args: unknown[]) => console.error(...args)
+    : console.log.bind(console);
+
+  log(`🔍 Analyzing changes against ${baseBranch}...\n`);
   const selection = await selectRegressionTests(baseBranch);
 
   if (outputArgs) {
-    // Machine-readable output for CI integration
+    // Machine-readable output for CI integration — stdout only, nothing else.
     const pwArgs = toPlaywrightArgs(selection);
-    console.log(pwArgs.join(" "));
+    process.stdout.write(pwArgs.join(" "));
     return;
   }
 

@@ -1,27 +1,56 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Must mock before importing the module under test
-vi.mock("@anthropic-ai/sdk", () => {
+// Do NOT use a file-level vi.mock("@anthropic-ai/sdk") here.
+// In vitest v3, hoisting a vi.mock() for a module causes all modules that
+// IMPORT that module (like ../client) to also be auto-mocked as a side
+// effect, making getClient a vi.fn() that returns undefined.
+// Instead, each test that needs the SDK mock uses vi.doMock() (non-hoisted)
+// followed by vi.resetModules() + a fresh dynamic import, keeping the
+// client module real and un-mocked.
+
+/** Creates a fresh SDK mock and returns the `create` spy for assertions. */
+async function setupSdkMock(): Promise<ReturnType<typeof vi.fn>> {
   const create = vi.fn();
-  return {
+  vi.doMock("@anthropic-ai/sdk", () => ({
     default: vi.fn(() => ({ messages: { create } })),
     __mockCreate: create,
-  };
-});
+  }));
+  vi.resetModules();
+  // Import client fresh so it picks up the new SDK mock.
+  const { _resetClientForTesting } = await import("../client");
+  _resetClientForTesting();
+  return create;
+}
 
 describe("client", () => {
   beforeEach(() => {
     vi.resetModules();
+    // Explicitly delete rather than vi.stubEnv(key, undefined):
+    // vi.stubEnv with undefined stores the literal string "undefined" in
+    // Node.js process.env which is truthy, causing getClient() to skip the
+    // API key guard.
     delete process.env.ANTHROPIC_API_KEY;
   });
 
+  afterEach(() => {
+    vi.doUnmock("@anthropic-ai/sdk");
+  });
+
   it("throws when ANTHROPIC_API_KEY is not set", async () => {
-    const { getClient } = await import("../client");
+    // setupSdkMock is required even for this test: without a mock for
+    // @anthropic-ai/sdk, vitest fails to reliably initialize ../client
+    // (the real SDK import causes module resolution issues in this env).
+    await setupSdkMock();
+    // Re-delete the key after setupSdkMock in case it was restored.
+    delete process.env.ANTHROPIC_API_KEY;
+    const { getClient, _resetClientForTesting } = await import("../client");
+    _resetClientForTesting();
     expect(() => getClient()).toThrow("ANTHROPIC_API_KEY");
   });
 
   it("creates a client when API key is provided", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-test-key";
+    await setupSdkMock();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-test-key");
     const { getClient } = await import("../client");
     const client = getClient();
     expect(client).toBeDefined();
@@ -29,9 +58,8 @@ describe("client", () => {
   });
 
   it("ask() returns text from Claude response", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-test-key";
-    const mod = await import("@anthropic-ai/sdk");
-    const mockCreate = (mod as any).__mockCreate as ReturnType<typeof vi.fn>;
+    const mockCreate = await setupSdkMock();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-test-key");
     mockCreate.mockResolvedValueOnce({
       content: [{ type: "text", text: "Hello from Claude" }],
     });
@@ -43,9 +71,8 @@ describe("client", () => {
   });
 
   it("ask() returns empty string when no text block in response", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-test-key";
-    const mod = await import("@anthropic-ai/sdk");
-    const mockCreate = (mod as any).__mockCreate as ReturnType<typeof vi.fn>;
+    const mockCreate = await setupSdkMock();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-test-key");
     mockCreate.mockResolvedValueOnce({
       content: [{ type: "tool_use", id: "t1" }],
     });
@@ -56,9 +83,8 @@ describe("client", () => {
   });
 
   it("askJSON() parses JSON from Claude response", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-test-key";
-    const mod = await import("@anthropic-ai/sdk");
-    const mockCreate = (mod as any).__mockCreate as ReturnType<typeof vi.fn>;
+    const mockCreate = await setupSdkMock();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-test-key");
     mockCreate.mockResolvedValueOnce({
       content: [{ type: "text", text: '{"status": "ok", "count": 3}' }],
     });
@@ -69,9 +95,8 @@ describe("client", () => {
   });
 
   it("askJSON() strips markdown fences from response", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-test-key";
-    const mod = await import("@anthropic-ai/sdk");
-    const mockCreate = (mod as any).__mockCreate as ReturnType<typeof vi.fn>;
+    const mockCreate = await setupSdkMock();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-test-key");
     mockCreate.mockResolvedValueOnce({
       content: [{ type: "text", text: '```json\n{"key": "value"}\n```' }],
     });
@@ -82,9 +107,8 @@ describe("client", () => {
   });
 
   it("askJSON() throws on invalid JSON", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-test-key";
-    const mod = await import("@anthropic-ai/sdk");
-    const mockCreate = (mod as any).__mockCreate as ReturnType<typeof vi.fn>;
+    const mockCreate = await setupSdkMock();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-test-key");
     mockCreate.mockResolvedValueOnce({
       content: [{ type: "text", text: "not valid json" }],
     });
