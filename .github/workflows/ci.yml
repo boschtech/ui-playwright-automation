@@ -180,6 +180,7 @@ jobs:
             ai-data-main-
 
       - name: Install Playwright deps
+        if: always()  # ensure packages are installed even if a prior step fails
         working-directory: ui-playwright-automation
         run: npm ci
 
