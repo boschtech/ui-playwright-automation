@@ -214,6 +214,7 @@ jobs:
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: ui-playwright-automation
+        timeout-minutes: 10
         run: npx playwright install --with-deps chromium
 
       # ── AI: Smart regression selection (optional) ──
