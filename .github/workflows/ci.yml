@@ -180,13 +180,20 @@ jobs:
             ai-data-main-
 
       - name: Install Playwright deps
-        if: always()  # ensure packages are installed even if a prior step fails
         working-directory: ui-playwright-automation
         run: npm ci
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('ui-playwright-automation/package-lock.json') }}
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: ui-playwright-automation
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
 
       # ── AI: Smart regression selection (optional) ──
       - name: AI - Smart Regression Selection
