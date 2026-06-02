@@ -270,18 +270,6 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      # - name: Run Playwright Tests
-      #   env:
-      #     E2E_BASE_URL: ${{ steps.resolve-url.outputs.url }}
-      #     CI: true
-      #   run: |
-      #     GREP="${{ github.event.inputs.test_grep }}"
-      #     if [ -n "$GREP" ]; then
-      #       npx playwright test --grep "$GREP"
-      #     else
-      #       npx playwright test
-      #     fi
-
       - name: Upload Playwright Report
         if: always()
         uses: actions/upload-artifact@v6
