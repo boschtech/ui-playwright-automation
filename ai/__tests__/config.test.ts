@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import path from "node:path";
 
 describe("config", () => {
   beforeEach(() => {
@@ -39,8 +40,8 @@ describe("config", () => {
     expect(aiConfig.paths.failureReport).toContain("last-failures.json");
     expect(aiConfig.paths.apiCaptures).toContain("api-captures.json");
     expect(aiConfig.paths.contracts).toContain("contracts");
-    expect(aiConfig.paths.e2eTests).toContain("e2e/tests");
-    expect(aiConfig.paths.e2ePages).toContain("e2e/pages");
+    expect(aiConfig.paths.e2eTests).toContain(path.join("e2e", "tests"));
+    expect(aiConfig.paths.e2ePages).toContain(path.join("e2e", "pages"));
   });
 
   it("has team mapping for both services", async () => {

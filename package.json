@@ -8,6 +8,7 @@
     "test:e2e:products": "playwright test --grep @product-service",
     "test:e2e:orders": "playwright test --grep @order-service",
     "test:e2e:all": "playwright test",
+    "test:e2e:all:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "ai:generate": "tsx ai/scripts/generate-tests.ts",
     "ai:select-regression": "tsx ai/scripts/select-regression.ts",
