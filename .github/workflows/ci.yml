@@ -1,8 +1,6 @@
 name: UI Playwright E2E Tests
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
     branches: [main]
   # Allow other repos to trigger this workflow
@@ -307,6 +305,7 @@ jobs:
           name: e2e-test-results
           path: ui-playwright-automation/test-results/
           retention-days: 14
+          if-no-files-found: ignore
 
       - name: Upload Service Logs
         if: always()
