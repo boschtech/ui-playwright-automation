@@ -11,6 +11,7 @@ export function buildProduct(
     category: string;
     description: string;
     price: string;
+    stock: "In Stock" | "Out of Stock";
   }> = {}
 ) {
   const id = uid();
@@ -20,6 +21,7 @@ export function buildProduct(
     description:
       overrides.description ?? `Automated test product created at ${id}`,
     price: overrides.price ?? "49.99",
+    stock: overrides.stock,
   };
 }
 

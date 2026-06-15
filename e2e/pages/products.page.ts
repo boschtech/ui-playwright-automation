@@ -16,6 +16,7 @@ export class ProductsPage {
   readonly categoryInput: Locator;
   readonly descriptionInput: Locator;
   readonly priceInput: Locator;
+  readonly stockSelect: Locator;
   readonly submitButton: Locator;
 
   constructor(page: Page) {
@@ -35,6 +36,7 @@ export class ProductsPage {
     this.categoryInput = page.locator("#product-category");
     this.descriptionInput = page.locator("#product-description");
     this.priceInput = page.locator("#product-price");
+    this.stockSelect = page.locator("#product-in-stock");
     this.submitButton = page.locator(
       'form button[type="submit"]'
     );
@@ -64,11 +66,15 @@ export class ProductsPage {
     category: string;
     description: string;
     price: string;
+    stock?: "In Stock" | "Out of Stock";
   }) {
     await this.nameInput.fill(data.name);
     await this.categoryInput.fill(data.category);
     await this.descriptionInput.fill(data.description);
     await this.priceInput.fill(data.price);
+    if (data.stock !== undefined) {
+      await this.stockSelect.selectOption({ label: data.stock });
+    }
   }
 
   async submitForm() {
@@ -80,6 +86,7 @@ export class ProductsPage {
     category: string;
     description: string;
     price: string;
+    stock?: "In Stock" | "Out of Stock";
   }) {
     await this.openCreateForm();
     await this.fillProductForm(data);
