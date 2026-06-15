@@ -39,8 +39,9 @@ describe("config", () => {
     expect(aiConfig.paths.failureReport).toContain("last-failures.json");
     expect(aiConfig.paths.apiCaptures).toContain("api-captures.json");
     expect(aiConfig.paths.contracts).toContain("contracts");
-    expect(aiConfig.paths.e2eTests).toContain("e2e/tests");
-    expect(aiConfig.paths.e2ePages).toContain("e2e/pages");
+    const normalize = (p: string) => p.replace(/\\/g, "/");
+    expect(normalize(aiConfig.paths.e2eTests)).toContain("e2e/tests");
+    expect(normalize(aiConfig.paths.e2ePages)).toContain("e2e/pages");
   });
 
   it("has team mapping for both services", async () => {
