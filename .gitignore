@@ -8,6 +8,7 @@ blob-report/
 .DS_Store
 .env
 .env.local
+test-results.json
 
 # AI platform generated data
 ai/history/

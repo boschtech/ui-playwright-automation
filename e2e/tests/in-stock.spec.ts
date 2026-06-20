@@ -186,13 +186,18 @@ test.describe("In Stock Functionality @product-service", () => {
       timeout: 10_000,
     });
 
-    // Return to the dashboard and verify the count went up by 1
+    // Return to the dashboard and verify the count reflects our new product.
+    // The suite runs fully in parallel against a shared backend, so other
+    // workers may create in-stock products concurrently. Assert the count
+    // grew by *at least* one (>=) rather than exactly one, otherwise a
+    // concurrent create pushes the value past initialCount + 1 and an exact
+    // match would never settle within the polling window.
     await dashboard.goto();
     await expect(async () => {
       const text = await dashboard.inStock.textContent();
       const match = text?.match(/(\d+)/);
       expect(match).not.toBeNull();
-      expect(parseInt(match![1], 10)).toBe(initialCount + 1);
+      expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(initialCount + 1);
     }).toPass({ timeout: 15_000 });
   });
 });
