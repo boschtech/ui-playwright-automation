@@ -3,7 +3,16 @@
  * Each factory appends a timestamp to guarantee uniqueness per run.
  */
 
-const uid = () => Date.now().toString(36);
+// Build a unique-per-call id. `fullyParallel` runs several workers, so two
+// `buildProduct()` calls can land in the same millisecond across workers.
+// Combine a timestamp with a monotonic per-process counter and a random
+// suffix so generated names never collide (which would otherwise cause
+// strict-mode locator violations on shared `getProductCard`/`getProductLink`).
+let counter = 0;
+const uid = () =>
+  `${Date.now().toString(36)}-${(counter++).toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 6)}`;
 
 export function buildProduct(
   overrides: Partial<{
@@ -11,6 +20,7 @@ export function buildProduct(
     category: string;
     description: string;
     price: string;
+    stock: "In Stock" | "Out of Stock";
   }> = {}
 ) {
   const id = uid();
@@ -20,6 +30,7 @@ export function buildProduct(
     description:
       overrides.description ?? `Automated test product created at ${id}`,
     price: overrides.price ?? "49.99",
+    stock: overrides.stock,
   };
 }
 

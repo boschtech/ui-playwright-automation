@@ -1,0 +1,8 @@
+﻿
+> ui-playwright-automation@1.0.0 test:e2e
+> playwright test
+
+[AI Reporter] Run 9c6c37a6-9876-4862-91ea-f3591f353578 started
+[AI Reporter] Run 9c6c37a6-9876-4862-91ea-f3591f353578 complete ÔÇö 39 passed, 9 failed
+
+[36m  Serving HTML report at http://localhost:9323. Press Ctrl+C to quit.[39m

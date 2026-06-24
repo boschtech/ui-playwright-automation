@@ -1,4 +1,4 @@
-import { type Page, type Locator } from "@playwright/test";
+import { type Page, type Locator, expect } from "@playwright/test";
 
 export class OrdersPage {
   readonly page: Page;
@@ -80,12 +80,22 @@ export class CreateOrderPage {
   }
 
   async selectProduct(productName: string) {
-    // Find the option whose text contains the product name
-    const option = this.page.locator("#order-product option", {
-      hasText: productName,
-    });
+    // Find the option whose text contains the product name. The dropdown is
+    // populated asynchronously from the products query, so the option for a
+    // freshly created product may not be present immediately — wait for it
+    // to attach before reading its value. Use `.first()` so a substring
+    // match never trips a strict-mode violation.
+    const option = this.page
+      .locator("#order-product option", { hasText: productName })
+      .first();
+    await expect(option).toBeAttached({ timeout: 10_000 });
     const value = await option.getAttribute("value");
-    await this.productSelect.selectOption(value!);
+    if (value === null) {
+      throw new Error(
+        `Product option for "${productName}" is missing a value attribute`
+      );
+    }
+    await this.productSelect.selectOption(value);
   }
 
   async setQuantity(quantity: string) {

@@ -155,6 +155,15 @@ test.describe("Products @product-service", () => {
     await expect(badge).toHaveText(/In Stock|Out of Stock/);
   });
 
+  test("should create an out-of-stock product via the stock dropdown", async () => {
+    const product = buildProduct({ stock: "Out of Stock" });
+    await productsPage.createProduct(product);
+
+    const card = productsPage.getProductCard(product.name);
+    await expect(card).toBeVisible({ timeout: 10_000 });
+    await expect(card.locator("span.rounded-full")).toHaveText("Out of Stock");
+  });
+
   test("should show product orders section on detail page", async ({
     page,
   }) => {
