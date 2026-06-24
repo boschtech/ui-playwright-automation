@@ -334,7 +334,6 @@ jobs:
   publish-report:
     name: Publish Playwright Report to GitHub Pages
     needs: e2e-tests
-    if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: write
